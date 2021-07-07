@@ -5,7 +5,7 @@ and talk to Google APIs.
 
 Have a question? Book a slot to chat further or [open an issue](https://github.com/contributorpw/gapi-firebase-apps-script/issues/new)
 
-This is a hard fork of the repo [https://github.com/msukmanowsky/gapi-firebase](msukmanowsky/gapi-firebase). You may wish to contact the author for direct advice. Visit the page.
+This is a hard fork of the repo [msukmanowsky/gapi-firebase](https://github.com/msukmanowsky/gapi-firebase). You may wish to contact the author for direct advice. Visit the page.
 
 ## Background
 
