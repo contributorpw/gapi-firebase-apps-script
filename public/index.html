@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>GAPI and Firebase Auth</title>
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+      integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+      crossorigin="anonymous"
+    />
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.7.0/firebase.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="js/init.js"></script>
+    <style>
+      .container {
+        max-width: 600px;
+      }
+    </style>
+  </head>
+  <body>
+    <main role="main" class="container">
+      <h1 class="mt-5">GAPI and Firebase Auth</h1>
+      <p className="lead">
+        An example of how to use GAPI and Firebase Auth together to authenticate
+        users and talk to Google APIs.
+      </p>
+      <p>Ensure you have your developer console open.</p>
+      <p>
+        <button id="sign_in" class="btn btn-primary">Sign in</button>
+        <button id="sign_out" class="btn btn-primary">Sign out</button>
+      </p>
+    </main>
+    <script type="text/babel">
+      const AUTH_SCOPES = [
+        'email',
+        'profile',
+        'https://www.googleapis.com/auth/script.external_request',
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive',
+        'https://www.googleapis.com/auth/script.projects',
+      ];
+      // OVERWRITE ME
+      // const FIREBASE_CONFIG = {}
+
+      const fb = firebase.initializeApp(FIREBASE_CONFIG);
+
+      // OVERWRITE ME
+      // const CLIENT_ID = '000.apps.googleusercontent.com';
+
+      function handleIsSignedIn(isSignedIn) {
+        if (isSignedIn) {
+          const auth2 = gapi.auth2.getAuthInstance();
+          const currentUser = auth2.currentUser.get();
+          const profile = currentUser.getBasicProfile();
+          console.log('gapi: user signed in!', {
+            name: profile.getName(),
+            imageURL: profile.getImageUrl(),
+            email: profile.getEmail(),
+          });
+          const authResponse = currentUser.getAuthResponse(true);
+          const credential = firebase.auth.GoogleAuthProvider.credential(
+            authResponse.id_token,
+            authResponse.access_token
+          );
+          fb.auth()
+            .signInWithCredential(credential)
+            .then(({ user }) => {
+              console.log('firebase: user signed in!', {
+                displayName: user.displayName,
+                email: user.email,
+                photoURL: user.photoURL,
+              });
+            });
+
+          gapi.client.script.scripts
+            .run({
+              scriptId:
+                'AKfycbyvO9ZvnS1UzZ1i46--5Ba3F0aLUFqohaP5AZ2BCgCxVDF6Ggvdn6SUJfy0km8IWiDx',
+              resource: {
+                function: 'run',
+              },
+            })
+            .then((res) => {
+              console.log('OK');
+            })
+            .catch((err) => console.error(err));
+        } else {
+          console.log('gapi: user is not signed in');
+        }
+      }
+
+      new Promise((resolve, reject) => {
+        gapi.load('client:auth2', () => {
+          resolve();
+        });
+      })
+        .then(() => {
+          console.log('gapi client init');
+          return gapi.client.init({
+            apiKey: FIREBASE_CONFIG.apiKey,
+            clientId: CLIENT_ID,
+            scope: AUTH_SCOPES.join(' '),
+            discoveryDocs: [
+              'https://script.googleapis.com/$discovery/rest?version=v1',
+            ],
+          });
+        })
+        .then(() => {
+          const auth2 = gapi.auth2.getAuthInstance();
+          auth2.isSignedIn.listen(handleIsSignedIn);
+          handleIsSignedIn(auth2.isSignedIn.get());
+          document
+            .querySelector('#sign_in')
+            .addEventListener('click', function handleSignIn() {
+              const auth2 = gapi.auth2.getAuthInstance();
+              if (auth2.isSignedIn.get()) {
+                alert('already signed in');
+                return;
+              }
+              auth2.signIn().catch((error) => {
+                alert(`sign in error: ${error}`);
+              });
+            });
+          document
+            .querySelector('#sign_out')
+            .addEventListener('click', function handleSignOut() {
+              console.log('signing out...');
+              const auth2 = gapi.auth2.getAuthInstance();
+              if (!auth2.isSignedIn.get()) {
+                alert('Not signed in!');
+                return;
+              }
+              auth2
+                .signOut()
+                .then(() => {
+                  console.log('gapi: sign out complete');
+                })
+                .then(() => {
+                  return fb.auth().signOut();
+                })
+                .then(() => {
+                  console.log('firebase: sign out complete');
+                });
+            });
+        });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,4 @@
+node_modules
+.firebaserc
+firebase-debug.log
+public/js/init.js
